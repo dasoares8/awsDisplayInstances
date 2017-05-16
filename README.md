@@ -8,7 +8,7 @@ Required Python modules (see requirements.txt):
 - argparse
 - tabulate
 
-usage: awsInstancesWithClass.py [-h] [--region REGION] [--tagkey TAGKEY]
+usage: awsDisplayInstances.py [-h] [--region REGION] [--tagkey TAGKEY]
                                 [--addfields [ADDFIELDS [ADDFIELDS ...]]]
 
 list all EC2 instances in any single region, sorted by the value of a tag
@@ -22,7 +22,7 @@ optional arguments:
                         table; separate each with a space
                         
 example output:
-(venv) C:\>python awsInstancesWithClass.py --addfields image_id subnet_id private_ip_address
+(venv) C:\>python awsDisplayInstances.py --addfields image_id subnet_id private_ip_address
 
 Region: us-east-1
 
