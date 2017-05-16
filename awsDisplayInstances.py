@@ -55,9 +55,8 @@ class InstanceInfo():
             for user_added_field in self.user_added_fields:
                 user_added_val = getattr(inst, user_added_field)
                 value_list.append(user_added_val)
-
-            # Sort based on the tag's value
             instance_list.append(value_list)
+        # Sort based on the tag's value
         instance_list.sort(key=lambda x: x[1])
         return instance_list
 
