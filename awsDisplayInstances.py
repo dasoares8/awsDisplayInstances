@@ -49,15 +49,20 @@ class InstanceInfo():
     def populate_instance_info_table_data(self, ec2):
         # Just get all the instances there; no filtering involved
         instances = ec2.instances.filter(Filters=[])
-        instance_list = []
+        first_instance_iteration = True
         for inst in instances:
             tag_val=InstanceInfo.find_tag_and_return_value(self.tag_key, inst.tags)
             # value_list starts as default table config (based on requested tag name),
             # then appends user requested fields
             value_list = [inst.id, tag_val, inst.instance_type, inst.launch_time]
             for user_added_field in self.user_added_fields:
-                user_added_val = getattr(inst, user_added_field)
-                value_list.append(user_added_val)
+                if hasattr(inst, user_added_field):
+                    user_added_val = getattr(inst, user_added_field)
+                    value_list.append(user_added_val)
+                else:
+                    if first_instance_iteration:
+                        print("\n{} is not an EC2 attribute; ignoring\n".format(user_added_field))
+            first_instance_iteration = False
             self.instance_table.append(value_list)
         # Sort based on the tag's value
         self.instance_table.sort(key=lambda x: x[1])
