@@ -1,3 +1,4 @@
+import sys
 import boto3
 import argparse
 from tabulate import tabulate
@@ -17,9 +18,37 @@ class InstanceInfo():
         for tag in tag_list:
             if tag['Key'] == tag_key:
                 return tag['Value']
-            return 'unknown'
+        return 'unknown'
 
         
+    # Generic method to evaluate if a boto resource in a collection
+    # (like ec2.instances) has a requested attribute
+    @staticmethod
+    def verify_aws_resource_attr(inst, attr):
+        result = hasattr(inst, attr)
+        if result:
+            return result
+        else:
+            return None
+        
+
+    # Check if the fields exists in the inst. Send those back that do, 
+    # and remove those from the object's user_added_fields[] list that do not.
+    # Note: this could be a class method, but I'd like to move it out to 
+    # be generic for other AWS resource usage at some point
+    @staticmethod
+    def purge_invalid_attributes(inst, attrs):
+        valid_attrs = []
+        for attr in attrs:
+            valid_attr = InstanceInfo.verify_aws_resource_attr(inst, attr)
+            if valid_attr:
+                valid_attrs.append(attr)
+            else:
+                sys.stderr.write("\n{} is not a valid attribute; ignoring\n".format(attr))
+                continue
+        return valid_attrs
+
+
     # populate the instance with information passed from the user
     def init_with_arg_parser(self):
         parser = argparse.ArgumentParser(description="list all EC2 instances in any single region, sorted by the value of a tag")
@@ -47,24 +76,31 @@ class InstanceInfo():
 
     
     def populate_instance_info_table_data(self, ec2):
-        # Just get all the instances there; no filtering involved
+        # Just get all the instances there; no filtering required
         instances = ec2.instances.filter(Filters=[])
         first_instance_iteration = True
+
         for inst in instances:
             tag_val=InstanceInfo.find_tag_and_return_value(self.tag_key, inst.tags)
+
             # value_list starts as default table config (based on requested tag name),
-            # then appends user requested fields
             value_list = [inst.id, tag_val, inst.instance_type, inst.launch_time]
+            
+            # Purge the object's user_added_fields list for invalid items, valid items
+            # will be appended to the value_list
+            # This will also clear the way for the proper headers to be added later
+            # in printInstanceTable()
+            if first_instance_iteration:
+                self.user_added_fields = InstanceInfo.purge_invalid_attributes(inst, self.user_added_fields)
             for user_added_field in self.user_added_fields:
-                if hasattr(inst, user_added_field):
-                    user_added_val = getattr(inst, user_added_field)
-                    value_list.append(user_added_val)
-                else:
-                    if first_instance_iteration:
-                        print("\n{} is not an EC2 attribute; ignoring\n".format(user_added_field))
+                value_list.append(getattr(inst, user_added_field))
+
+            # We only need the purge to happen for the first instance, all other instances
+            # should be otherwise consistent
             first_instance_iteration = False
             self.instance_table.append(value_list)
-        # Sort based on the tag's value
+
+        # Finally, sort based on the tag's value
         self.instance_table.sort(key=lambda x: x[1])
         return
 
